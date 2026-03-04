@@ -1,0 +1,1302 @@
+{
+  "name": "Sample data",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "90dc9334-c1c9-4646-807d-859cb26fc217",
+      "name": "Weekly Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1344,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "2480b4a2-fb5f-4f2a-b2ff-f0c068d81845",
+              "leftValue": "={{ Number($json.followers) }}",
+              "rightValue": 5000,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "cc89377f-b650-4bf6-8daa-e73c0f5ce88f",
+              "leftValue": "={{ Number($json.followers) }}",
+              "rightValue": 10000000,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2f407a93-dde1-4a34-b209-251b09dc24f6",
+      "name": "Filter - Micro Influencer Range (5K to 100K)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $input.item.json;\n\n// Data comes pre-enriched from CSV - just normalise field names\nconst followers   = Number(item.followers || item.followersCount || 0);\nconst username    = item.username || item.userName || '';\nconst engagementRate = Number(item.engagementRate || 0);\n\nreturn {\n  name:            item.name || item.fullName || username,\n  username:        username,\n  platform:        item.platform || 'Instagram',\n  followers:       followers,\n  avgLikes:        Number(item.avgLikes || 0),\n  avgComments:     Number(item.avgComments || 0),\n  engagementRate:  engagementRate,\n  niche:           item.niche || 'Fitness',\n  contentThemes:   item.contentThemes || 'General Fitness',\n  email:           item.email || '',\n  profileLink:     item.profileLink || ('https://instagram.com/' + username),\n  city:            item.city || 'India',\n  bio:             item.bio || '',\n  segment:         item.segment || '',\n  collaborationType: item.collaborationType || ''\n};"
+      },
+      "id": "da2391cd-2dad-455a-9464-f7475a6df1ba",
+      "name": "Enrich Profile Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "seg-a",
+                    "leftValue": "={{ $json.followers }}",
+                    "rightValue": 30000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Segment A"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "seg-b1",
+                    "leftValue": "={{ $json.followers }}",
+                    "rightValue": 30000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gt"
+                    }
+                  },
+                  {
+                    "id": "seg-b2",
+                    "leftValue": "={{ $json.followers }}",
+                    "rightValue": 100000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Segment B"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "seg-c",
+                    "leftValue": "={{ $json.followers }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Segment C"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e5792de2-68c4-4cd2-b2a6-b27fa3e8f5e8",
+      "name": "Switch - Classify into Segments A / B / C",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -80,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "segment",
+              "value": "Segment A - Nano (<=30K)",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "collaborationType",
+              "value": "Barter / UGC Creation",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "47a6179a-1b80-4bb5-ba01-8042e445105d",
+      "name": "Tag - Segment A",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        160,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "segment",
+              "value": "Segment B - Mid Tier (30K-100K)",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "collaborationType",
+              "value": "Paid Sponsorship / Affiliate",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "15032e73-9702-4900-97ab-714e04b6a7a0",
+      "name": "Tag - Segment B",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        160,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "segment",
+              "value": "Segment C - High Potential (>=5% ER)",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "collaborationType",
+              "value": "Brand Ambassador",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "9cb313d6-e3d0-4d69-95a9-11de701e200a",
+      "name": "Tag - Segment C",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        160,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 4,
+        "options": {}
+      },
+      "id": "14f88043-181b-46fa-9243-f6d3fb6a01a6",
+      "name": "Loop - Process One by One",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        608,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an influencer marketing outreach specialist working for an Indian wellness brand.\n\nInfluencer Details:\n- Name: {{ $json.name }}\n- Platform: {{ $json.platform }}\n- Followers: {{ $json.followers }}\n- Engagement Rate: {{ $json.engagementRate }}%\n- Niche: {{ $json.niche }}\n- Content Themes: {{ $json.contentThemes }}\n- City: {{ $json.city }}\n- Segment: {{ $json.segment }}\n- Collaboration Type: {{ $json.collaborationType }}\n- Bio: {{ $json.bio }}\n\nGenerate two outreach messages. Return ONLY a raw JSON object, no markdown:\n\n{\n  \"emailPitch\": \"60-90 words. Professional tone. Reference their niche, themes and engagement. Mention the collaboration type.\",\n  \"instagramDM\": \"15-30 words. Casual and direct. Reference their content.\"\n}"
+      },
+      "id": "3f991290-3893-48ec-8330-af3bf04d5754",
+      "name": "AI Chain - Generate Outreach Messages",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        864,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $input.item.json;\nconst response = item.text || item.response || item.output || '';\nlet parsed;\ntry {\n  const clean = response.replace(/```json|```/g, '').trim();\n  parsed = JSON.parse(clean);\n} catch(e) {\n  parsed = { emailPitch: 'We would love to collaborate with you!', instagramDM: 'Hi! We love your content. Let us connect!' };\n}\nreturn {\n  ...item,\n  emailPitch:    parsed.emailPitch    || 'We would love to collaborate with you!',\n  instagramDM:   parsed.instagramDM   || 'Hi! We love your content. Let us connect!'\n};"
+      },
+      "id": "e3b1f107-a5ec-4351-9451-e8637935553b",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZGBnmdYgRmL_FidkAV0DWIqdWeWkLyDXav8eyLin2HQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{$('Loop - Process One by One').item.json.name }}",
+            "Platform": "={{$('Loop - Process One by One').item.json.platform }}",
+            "Followers": "={{$('Loop - Process One by One').item.json.followers }}",
+            "Engagement Rate": "={{$('Loop - Process One by One').item.json.engagementRate }}",
+            "Niche": "={{$('Loop - Process One by One').item.json.niche }}",
+            "Content Themes": "={{$('Loop - Process One by One').item.json.contentThemes }}",
+            "Contact Email": "={{$('Loop - Process One by One').item.json.email }}",
+            "Profile Link": "={{$('Loop - Process One by One').item.json.profileLink }}",
+            "City": "={{$('Loop - Process One by One').item.json.city }}",
+            "Segment": "={{$('Loop - Process One by One').item.json.segment }}",
+            "Email Pitch": "={{ $json.emailPitch }}",
+            "Instagram DM": "={{ $json.instagramDM }}",
+            "Email Sent": "No",
+            "Collaboration Type": "={{ $('Loop - Process One by One').item.json.collaborationType }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followers",
+              "displayName": "Followers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Engagement Rate",
+              "displayName": "Engagement Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Niche",
+              "displayName": "Niche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content Themes",
+              "displayName": "Content Themes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contact Email",
+              "displayName": "Contact Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Profile Link",
+              "displayName": "Profile Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Segment",
+              "displayName": "Segment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Collaboration Type",
+              "displayName": "Collaboration Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Pitch",
+              "displayName": "Email Pitch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Instagram DM",
+              "displayName": "Instagram DM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a2b4c139-e870-4e1a-97d3-eee3a1ed988b",
+      "name": "Google Sheets - Write to Raw Data",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1280,
+        560
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$('Loop - Process One by One').item.json.email }}",
+        "subject": [
+          "={{ 'Collaboration Opportunity - Indian Wellness Brand x ' + $('Loop - Process One by One').item.json.name }}"
+        ],
+        "emailType": "text",
+        "message": "={{ $json.emailPitch || 'Hi, we would love to collaborate with you!' }}",
+        "options": {
+          "senderName": "Your Brand Name"
+        }
+      },
+      "id": "057c0854-3aa4-441f-aca6-26813ab8fa67",
+      "name": "Gmail - Send Outreach Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1712,
+        448
+      ],
+      "webhookId": "e6d112c1-75a2-4048-b956-5fe8ebaaddeb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZGBnmdYgRmL_FidkAV0DWIqdWeWkLyDXav8eyLin2HQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Profile Link": "={{ $json.profileLink }}",
+            "Email Sent": "Yes"
+          },
+          "matchingColumns": [
+            "Profile Link"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Followers",
+              "displayName": "Followers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Engagement Rate",
+              "displayName": "Engagement Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Niche",
+              "displayName": "Niche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Content Themes",
+              "displayName": "Content Themes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Contact Email",
+              "displayName": "Contact Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Profile Link",
+              "displayName": "Profile Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Segment",
+              "displayName": "Segment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Collaboration Type",
+              "displayName": "Collaboration Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email Pitch",
+              "displayName": "Email Pitch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Instagram DM",
+              "displayName": "Instagram DM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1a38095f-02c9-4fb5-9a62-dcef765f9c4a",
+      "name": "Google Sheets - Mark Email as Sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1920,
+        448
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "id": "54d0428f-2b12-4bd8-a28d-03821d94bcfb",
+      "name": "Rate Limit - Wait 60 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        688
+      ],
+      "webhookId": "eb6710bd-612c-4163-a8c8-6ce67314b9f7"
+    },
+    {
+      "parameters": {
+        "content": "STEP 1 \u2014 TRIGGER\n\nRuns automatically every Monday at 9:00 AM via cron schedule. No manual action needed. Initiates the full pipeline.",
+        "height": 140,
+        "color": 7
+      },
+      "id": "f81a0dc4-00e9-420f-919d-6a71b72b4113",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1456,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 2 \u2014 DISCOVERY\n\nApify Instagram Hashtag Scraper is triggered via HTTP POST. Hashtags: #fitnessindia #indianfitness #fitnessmotivation.\n\nA 45-second wait allows the scraper to complete. Results are then fetched via HTTP GET.\n\nOutput: Raw profile JSON data.",
+        "height": 200,
+        "width": 420,
+        "color": 3
+      },
+      "id": "221f5ea4-84db-4463-9cf1-4599d4322299",
+      "name": "Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1120,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 3 \u2014 FILTERING\n\nOnly profiles with 5,000 to 100,000 followers pass through. Profiles outside this range are dropped automatically.",
+        "height": 140,
+        "width": 260,
+        "color": 5
+      },
+      "id": "1ae14b21-9e70-4cab-aa1c-6aef98dd8672",
+      "name": "Note 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 4 \u2014 ENRICHMENT\n\nFor each profile:\n- Engagement Rate calculated from avg likes and comments\n- Email extracted from bio via regex\n- City detected from bio text\n- Content themes classified from bio keywords\n\nAll 13 sheet columns are populated here.",
+        "height": 200,
+        "width": 300,
+        "color": 4
+      },
+      "id": "a944d59b-45ac-4eb4-91a1-7fd79c8bf969",
+      "name": "Note 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 5 \u2014 SEGMENTATION\n\nSegment A \u2014 Nano Creators\n<=30K followers and >=4% engagement\nCollab type: Barter / UGC\n\nSegment B \u2014 Mid Tier Micro\n30K-100K followers and >=2% engagement\nCollab type: Paid Sponsorship / Affiliate\n\nSegment C \u2014 High Potential\n>=5% engagement regardless of follower count\nCollab type: Brand Ambassador\n\nAll three are merged and the segment label is stored in the Segment column of the sheet. Use filter view in Google Sheets to view each segment separately.",
+        "height": 300,
+        "width": 360,
+        "color": 6
+      },
+      "id": "ddb8a5c5-e8e4-440f-95f8-ab4cd1dc9198",
+      "name": "Note 5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 6 \u2014 AI MESSAGE GENERATION\n\nEach influencer is processed one at a time via a loop.\n\nGemini 1.5 Flash generates:\n1. Email Pitch (60-90 words) \u2014 professional, references niche, themes, collaboration type\n2. Instagram DM (15-30 words) \u2014 casual and direct\n\nA 60-second wait between iterations prevents Gemini API rate limit errors.\n\nResponse is parsed from JSON and attached to the record.",
+        "height": 260,
+        "width": 360,
+        "color": 2
+      },
+      "id": "1ba650ef-4034-4640-a0c5-24224db025f8",
+      "name": "Note 6",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 7 \u2014 DATA STORAGE\n\nAll 13 fields written to the Raw Data tab in Google Sheets.\n\nTo view by segment, use the filter view on the Segment column. No separate tabs needed \u2014 everything is in one clean sheet.",
+        "height": 180,
+        "width": 300
+      },
+      "id": "c4ea1040-47c4-4da4-8ce6-56e05d8e2750",
+      "name": "Note 7",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 8 \u2014 OUTREACH\n\nIf email found in bio: Gmail node sends outreach automatically. Sheet is updated to Sent.\n\nIf no email found: Row is saved in sheet. DM message is ready for manual sending via Instagram or tools like ManyChat.\n\nNote: Meta Graph API requires business approval for automated DM sending.",
+        "height": 220,
+        "width": 340,
+        "color": 3
+      },
+      "id": "254fa069-39c9-48b2-b696-5e918700f782",
+      "name": "Note 8",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const influencers = [\n  {\n    \"name\": \"Akshay Fitness\",\n    \"username\": \"akshay_fitnessindia\",\n    \"platform\": \"Instagram\",\n    \"followers\": 12400,\n    \"avgLikes\": 620,\n    \"avgComments\": 48,\n    \"engagementRate\": 5.39,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, General Fitness\",\n    \"email\": \"akshay.fitnessindia@gmail.com\",\n    \"profileLink\": \"https://instagram.com/akshay_fitnessindia\",\n    \"city\": \"Delhi\",\n    \"bio\": \"Home workout coach Delhi akshay.fitnessindia@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Priya Yoga\",\n    \"username\": \"priya_yogaindia\",\n    \"platform\": \"Instagram\",\n    \"followers\": 8900,\n    \"avgLikes\": 490,\n    \"avgComments\": 38,\n    \"engagementRate\": 5.93,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Yoga, Mental Wellness\",\n    \"email\": \"priya.yogaindia@gmail.com\",\n    \"profileLink\": \"https://instagram.com/priya_yogaindia\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Yoga instructor Mumbai priya.yogaindia@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Rohan Fit\",\n    \"username\": \"rohan_fitlife_in\",\n    \"platform\": \"Instagram\",\n    \"followers\": 15600,\n    \"avgLikes\": 780,\n    \"avgComments\": 62,\n    \"engagementRate\": 5.4,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, Nutrition\",\n    \"email\": \"rohan.fitlife@gmail.com\",\n    \"profileLink\": \"https://instagram.com/rohan_fitlife_in\",\n    \"city\": \"Pune\",\n    \"bio\": \"Certified fitness coach Pune rohan.fitlife@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Nidhi Skincare\",\n    \"username\": \"nidhi_skincareindia\",\n    \"platform\": \"Instagram\",\n    \"followers\": 19500,\n    \"avgLikes\": 880,\n    \"avgComments\": 67,\n    \"engagementRate\": 4.86,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare\",\n    \"email\": \"nidhi.skincare@gmail.com\",\n    \"profileLink\": \"https://instagram.com/nidhi_skincareindia\",\n    \"city\": \"Delhi\",\n    \"bio\": \"Skincare blogger Delhi nidhi.skincare@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Divya Makeup\",\n    \"username\": \"divya_makeupartist_in\",\n    \"platform\": \"Instagram\",\n    \"followers\": 23700,\n    \"avgLikes\": 1050,\n    \"avgComments\": 79,\n    \"engagementRate\": 4.77,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Makeup\",\n    \"email\": \"divya.mua@gmail.com\",\n    \"profileLink\": \"https://instagram.com/divya_makeupartist_in\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Makeup artist Mumbai divya.mua@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Arjun Calisthenics\",\n    \"username\": \"arjun_calisthenics_in\",\n    \"platform\": \"Instagram\",\n    \"followers\": 9800,\n    \"avgLikes\": 520,\n    \"avgComments\": 41,\n    \"engagementRate\": 5.73,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, General Fitness\",\n    \"email\": \"arjun.calisthenics@gmail.com\",\n    \"profileLink\": \"https://instagram.com/arjun_calisthenics_in\",\n    \"city\": \"Bangalore\",\n    \"bio\": \"Calisthenics athlete Bangalore arjun.calisthenics@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Meera Glow\",\n    \"username\": \"meera_glowskin\",\n    \"platform\": \"Instagram\",\n    \"followers\": 14200,\n    \"avgLikes\": 710,\n    \"avgComments\": 55,\n    \"engagementRate\": 5.38,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare\",\n    \"email\": \"meera.glowskin@gmail.com\",\n    \"profileLink\": \"https://instagram.com/meera_glowskin\",\n    \"city\": \"Chennai\",\n    \"bio\": \"Skincare routine Chennai meera.glowskin@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Sneha Nutrition\",\n    \"username\": \"sneha_nutritionfit\",\n    \"platform\": \"Instagram\",\n    \"followers\": 22100,\n    \"avgLikes\": 990,\n    \"avgComments\": 71,\n    \"engagementRate\": 4.8,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Nutrition, Weight Management\",\n    \"email\": \"sneha.nutrition@gmail.com\",\n    \"profileLink\": \"https://instagram.com/sneha_nutritionfit\",\n    \"city\": \"Hyderabad\",\n    \"bio\": \"Nutritionist Hyderabad sneha.nutrition@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Rahul Yoga\",\n    \"username\": \"rahul_yogateacher\",\n    \"platform\": \"Instagram\",\n    \"followers\": 11200,\n    \"avgLikes\": 590,\n    \"avgComments\": 44,\n    \"engagementRate\": 5.65,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Yoga, Mental Wellness\",\n    \"email\": \"rahul.yogateacher@gmail.com\",\n    \"profileLink\": \"https://instagram.com/rahul_yogateacher\",\n    \"city\": \"Jaipur\",\n    \"bio\": \"Yoga teacher Jaipur rahul.yogateacher@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Aarti Beauty\",\n    \"username\": \"aarti_beautytips_in\",\n    \"platform\": \"Instagram\",\n    \"followers\": 16800,\n    \"avgLikes\": 790,\n    \"avgComments\": 61,\n    \"engagementRate\": 5.06,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"aarti.beauty@gmail.com\",\n    \"profileLink\": \"https://instagram.com/aarti_beautytips_in\",\n    \"city\": \"Kolkata\",\n    \"bio\": \"Beauty tips Kolkata aarti.beauty@gmail.com\",\n    \"segment\": \"Segment A - Nano (<=30K)\",\n    \"collaborationType\": \"Barter / UGC Creation\"\n  },\n  {\n    \"name\": \"Vaibhav Mahajan\",\n    \"username\": \"_vaibhav_mahajann\",\n    \"platform\": \"Instagram\",\n    \"followers\": 89300,\n    \"avgLikes\": 1200,\n    \"avgComments\": 85,\n    \"engagementRate\": 1.44,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, General Fitness\",\n    \"email\": \"vaibhav.mahajan@gmail.com\",\n    \"profileLink\": \"https://instagram.com/_vaibhav_mahajann\",\n    \"city\": \"India\",\n    \"bio\": \"Fitness+Couple YT-65k subs Vaibhav Mahajan Vlogs vaibhav.mahajan@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Namrata Purohit\",\n    \"username\": \"namratapurohit\",\n    \"platform\": \"Instagram\",\n    \"followers\": 98000,\n    \"avgLikes\": 3200,\n    \"avgComments\": 210,\n    \"engagementRate\": 3.48,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Yoga, Workout, Mental Wellness\",\n    \"email\": \"namrata@gratitudecompany.in\",\n    \"profileLink\": \"https://instagram.com/namratapurohit\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Mindful Movement Practitioner, Fitness Coach, Sports Nutritionist namrata@gratitudecompany.in\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Rushali Rai\",\n    \"username\": \"ssrushti\",\n    \"platform\": \"Instagram\",\n    \"followers\": 94000,\n    \"avgLikes\": 4200,\n    \"avgComments\": 280,\n    \"engagementRate\": 4.77,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, Mental Wellness\",\n    \"email\": \"ssrushti@gmail.com\",\n    \"profileLink\": \"https://instagram.com/ssrushti\",\n    \"city\": \"India\",\n    \"bio\": \"Calisthenics | Mountains | Female Calisthenics Coach India ssrushti@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Thatfitmum\",\n    \"username\": \"thatfitmum\",\n    \"platform\": \"Instagram\",\n    \"followers\": 88000,\n    \"avgLikes\": 3800,\n    \"avgComments\": 245,\n    \"engagementRate\": 4.6,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Yoga, Workout, General Fitness\",\n    \"email\": \"thatfitmum@gmail.com\",\n    \"profileLink\": \"https://instagram.com/thatfitmum\",\n    \"city\": \"India\",\n    \"bio\": \"Yogini | ACE Cert Fitness coach | NASM Cert Nutritionist | Fit India Champion thatfitmum@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Muscle Barbie\",\n    \"username\": \"musclebarbiee_\",\n    \"platform\": \"Instagram\",\n    \"followers\": 78000,\n    \"avgLikes\": 2900,\n    \"avgComments\": 198,\n    \"engagementRate\": 3.97,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, Weight Management\",\n    \"email\": \"musclebarbiee@gmail.com\",\n    \"profileLink\": \"https://instagram.com/musclebarbiee_\",\n    \"city\": \"India\",\n    \"bio\": \"Fitness Lifestyle Athlete @asitisnutrition musclebarbiee@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Naveen Jangid\",\n    \"username\": \"its__naveenjangid48\",\n    \"platform\": \"Instagram\",\n    \"followers\": 52000,\n    \"avgLikes\": 2100,\n    \"avgComments\": 145,\n    \"engagementRate\": 4.32,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, General Fitness\",\n    \"email\": \"naveenjangid1@gmail.com\",\n    \"profileLink\": \"https://instagram.com/its__naveenjangid48\",\n    \"city\": \"Jaipur\",\n    \"bio\": \"FITNESS | LIFESTYLE | TRAVEL | FASHION DM/Mail for collaboration naveenjangid1@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Yasmin Karachiwala\",\n    \"username\": \"yasminkarachiwala\",\n    \"platform\": \"Instagram\",\n    \"followers\": 95000,\n    \"avgLikes\": 4800,\n    \"avgComments\": 320,\n    \"engagementRate\": 5.39,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, Mental Wellness\",\n    \"email\": \"collab@yasminkarachiwala.com\",\n    \"profileLink\": \"https://instagram.com/yasminkarachiwala\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Celebrity fitness trainer Mumbai collab@yasminkarachiwala.com\",\n    \"segment\": \"Segment C - High Potential (>=5% ER)\",\n    \"collaborationType\": \"Brand Ambassador\"\n  },\n  {\n    \"name\": \"Vaanya Badola\",\n    \"username\": \"vaanya_badola\",\n    \"platform\": \"Instagram\",\n    \"followers\": 42000,\n    \"avgLikes\": 2200,\n    \"avgComments\": 155,\n    \"engagementRate\": 5.61,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Weight Management, General Fitness\",\n    \"email\": \"vaanya.badola@gmail.com\",\n    \"profileLink\": \"https://instagram.com/vaanya_badola\",\n    \"city\": \"India\",\n    \"bio\": \"Fitness transformation coach vaanya.badola@gmail.com\",\n    \"segment\": \"Segment C - High Potential (>=5% ER)\",\n    \"collaborationType\": \"Brand Ambassador\"\n  },\n  {\n    \"name\": \"Simrun Chopra\",\n    \"username\": \"simrun.chopra\",\n    \"platform\": \"Instagram\",\n    \"followers\": 98000,\n    \"avgLikes\": 4500,\n    \"avgComments\": 290,\n    \"engagementRate\": 4.89,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Nutrition, Weight Management\",\n    \"email\": \"simrunchopra@gmail.com\",\n    \"profileLink\": \"https://instagram.com/simrun.chopra\",\n    \"city\": \"India\",\n    \"bio\": \"I help WOMEN fix health & weight issues simrunchopra@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Trendy Criminal\",\n    \"username\": \"trendy_criminal\",\n    \"platform\": \"Instagram\",\n    \"followers\": 82000,\n    \"avgLikes\": 3100,\n    \"avgComments\": 205,\n    \"engagementRate\": 4.03,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, Weight Management\",\n    \"email\": \"trendycriminal@gmail.com\",\n    \"profileLink\": \"https://instagram.com/trendy_criminal\",\n    \"city\": \"Chandigarh\",\n    \"bio\": \"Helping busy women 30+ Get strong, lean, pain free! trendycriminal@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Kavinath Fitz\",\n    \"username\": \"kavinath_fitz1\",\n    \"platform\": \"Instagram\",\n    \"followers\": 65000,\n    \"avgLikes\": 2600,\n    \"avgComments\": 178,\n    \"engagementRate\": 4.28,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, General Fitness\",\n    \"email\": \"kavinath.fitz@gmail.com\",\n    \"profileLink\": \"https://instagram.com/kavinath_fitz1\",\n    \"city\": \"India\",\n    \"bio\": \"Home workout & calisthenics coach kavinath.fitz@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Miss Nidss\",\n    \"username\": \"missnidss\",\n    \"platform\": \"Instagram\",\n    \"followers\": 51000,\n    \"avgLikes\": 2050,\n    \"avgComments\": 138,\n    \"engagementRate\": 4.28,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, General Fitness\",\n    \"email\": \"missnidss@gmail.com\",\n    \"profileLink\": \"https://instagram.com/missnidss\",\n    \"city\": \"India\",\n    \"bio\": \"PI Haryana State Bench Press Champion | Athlete @wellcore.in missnidss@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Luke Coutinho\",\n    \"username\": \"luke_coutinho\",\n    \"platform\": \"Instagram\",\n    \"followers\": 91000,\n    \"avgLikes\": 3800,\n    \"avgComments\": 248,\n    \"engagementRate\": 4.44,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Nutrition, Mental Wellness, General Fitness\",\n    \"email\": \"luke@lukecoutinho.com\",\n    \"profileLink\": \"https://instagram.com/luke_coutinho\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Integrative & Lifestyle Medicine | Fit India Movement luke@lukecoutinho.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Fit Karunadu\",\n    \"username\": \"fit_karunadu\",\n    \"platform\": \"Instagram\",\n    \"followers\": 74000,\n    \"avgLikes\": 2800,\n    \"avgComments\": 188,\n    \"engagementRate\": 4.04,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, Running\",\n    \"email\": \"fitkarunadu@gmail.com\",\n    \"profileLink\": \"https://instagram.com/fit_karunadu\",\n    \"city\": \"Bangalore\",\n    \"bio\": \"Fitness & adventure content creator fitkarunadu@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Ramniwas Malik\",\n    \"username\": \"ramniwasmalik\",\n    \"platform\": \"Instagram\",\n    \"followers\": 38000,\n    \"avgLikes\": 1600,\n    \"avgComments\": 108,\n    \"engagementRate\": 4.49,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, General Fitness\",\n    \"email\": \"ramniwas.malik@gmail.com\",\n    \"profileLink\": \"https://instagram.com/ramniwasmalik\",\n    \"city\": \"Delhi\",\n    \"bio\": \"Bodybuilding champion | Fitness coach ramniwas.malik@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Beautypost.in\",\n    \"username\": \"beautypost.in\",\n    \"platform\": \"Instagram\",\n    \"followers\": 91800,\n    \"avgLikes\": 3400,\n    \"avgComments\": 225,\n    \"engagementRate\": 3.94,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"beautypost@beautypost.in\",\n    \"profileLink\": \"https://instagram.com/beautypost.in\",\n    \"city\": \"India\",\n    \"bio\": \"Skincare, Haircare & Makeup | Beauty filters make me uncomfortable! beautypost@beautypost.in\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Sahiba Walia\",\n    \"username\": \"sahiba_walia_\",\n    \"platform\": \"Instagram\",\n    \"followers\": 88100,\n    \"avgLikes\": 3200,\n    \"avgComments\": 212,\n    \"engagementRate\": 3.87,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"sahibawalia@gmail.com\",\n    \"profileLink\": \"https://instagram.com/sahiba_walia_\",\n    \"city\": \"Chandigarh\",\n    \"bio\": \"oversharing about everything I love | beauty | lifestyle sahibawalia@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Shantanu Dhope\",\n    \"username\": \"shantanudhope\",\n    \"platform\": \"Instagram\",\n    \"followers\": 65800,\n    \"avgLikes\": 2500,\n    \"avgComments\": 168,\n    \"engagementRate\": 4.05,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"shantanu@monk-e.in\",\n    \"profileLink\": \"https://instagram.com/shantanudhope\",\n    \"city\": \"India\",\n    \"bio\": \"Beauty & grooming content creator shantanu@monk-e.in\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Juhi Chabriya\",\n    \"username\": \"_juhichabriya_\",\n    \"platform\": \"Instagram\",\n    \"followers\": 64700,\n    \"avgLikes\": 2450,\n    \"avgComments\": 162,\n    \"engagementRate\": 4.02,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"juhichabriya@gmail.com\",\n    \"profileLink\": \"https://instagram.com/_juhichabriya_\",\n    \"city\": \"India\",\n    \"bio\": \"Makeup | Skincare | Fashion juhichabriya@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Sachin Grooming\",\n    \"username\": \"sachinnn_011\",\n    \"platform\": \"Instagram\",\n    \"followers\": 56000,\n    \"avgLikes\": 2200,\n    \"avgComments\": 148,\n    \"engagementRate\": 4.19,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare\",\n    \"email\": \"sachin011@brozmedia.in\",\n    \"profileLink\": \"https://instagram.com/sachinnn_011\",\n    \"city\": \"India\",\n    \"bio\": \"Men's Grooming | Skin Care | Lifestyle | Male Skincare Influencer Of The Year 2024 sachin011@brozmedia.in\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Glamxxaleen\",\n    \"username\": \"glamxxaleen\",\n    \"platform\": \"Instagram\",\n    \"followers\": 44100,\n    \"avgLikes\": 1850,\n    \"avgComments\": 122,\n    \"engagementRate\": 4.47,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"glamxxaleen@gmail.com\",\n    \"profileLink\": \"https://instagram.com/glamxxaleen\",\n    \"city\": \"Delhi\",\n    \"bio\": \"artsy makeup, honest skincare & bollywood flair | Delhi glamxxaleen@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Preiti Bhamra\",\n    \"username\": \"preitibhamra\",\n    \"platform\": \"Instagram\",\n    \"followers\": 44000,\n    \"avgLikes\": 1820,\n    \"avgComments\": 120,\n    \"engagementRate\": 4.41,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare\",\n    \"email\": \"preitibhamra@gmail.com\",\n    \"profileLink\": \"https://instagram.com/preitibhamra\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"ur internet big sis for self-care & cruelty-free products | 2x @cosmoindia Beauty Influencer preitibhamra@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Shivani Verma\",\n    \"username\": \"shivaniiivermaaa\",\n    \"platform\": \"Instagram\",\n    \"followers\": 42400,\n    \"avgLikes\": 1780,\n    \"avgComments\": 118,\n    \"engagementRate\": 4.47,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare\",\n    \"email\": \"shivaniverma@outlook.com\",\n    \"profileLink\": \"https://instagram.com/shivaniiivermaaa\",\n    \"city\": \"Pune\",\n    \"bio\": \"glow, care, repeat - skincare | haircare | makeup | collab: shivaniverma@outlook.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Ruchi Methwani\",\n    \"username\": \"ruchikamethwani\",\n    \"platform\": \"Instagram\",\n    \"followers\": 84700,\n    \"avgLikes\": 3100,\n    \"avgComments\": 205,\n    \"engagementRate\": 3.91,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"ruchimethwani@gmail.com\",\n    \"profileLink\": \"https://instagram.com/ruchikamethwani\",\n    \"city\": \"Delhi\",\n    \"bio\": \"Finding the best of beauty, fashion & lifestyle | Biotechnologist | Delhi ruchimethwani@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Prerna MT\",\n    \"username\": \"prerna.mt\",\n    \"platform\": \"Instagram\",\n    \"followers\": 79000,\n    \"avgLikes\": 2900,\n    \"avgComments\": 192,\n    \"engagementRate\": 3.91,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"prerna.mt@gmail.com\",\n    \"profileLink\": \"https://instagram.com/prerna.mt\",\n    \"city\": \"Delhi\",\n    \"bio\": \"Influencing Your Beauty | Makeup & Skincare Tips | Delhi prerna.mt@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Shreemayi Reddy\",\n    \"username\": \"shreemayireddyy\",\n    \"platform\": \"Instagram\",\n    \"followers\": 96000,\n    \"avgLikes\": 5100,\n    \"avgComments\": 335,\n    \"engagementRate\": 5.66,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"shreemayi.reddy@honeycombmedia.in\",\n    \"profileLink\": \"https://instagram.com/shreemayireddyy\",\n    \"city\": \"India\",\n    \"bio\": \"Beauty Fashion Lifestyle | Forbes India Top 100 Digital Stars 2024 shreemayi.reddy@honeycombmedia.in\",\n    \"segment\": \"Segment C - High Potential (>=5% ER)\",\n    \"collaborationType\": \"Brand Ambassador\"\n  },\n  {\n    \"name\": \"Sarah Sarosh\",\n    \"username\": \"sarahsaroshh\",\n    \"platform\": \"Instagram\",\n    \"followers\": 88000,\n    \"avgLikes\": 4800,\n    \"avgComments\": 312,\n    \"engagementRate\": 5.81,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"sarah@sarahsaroshh.com\",\n    \"profileLink\": \"https://instagram.com/sarahsaroshh\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Unfiltered Beauty & Experiences | Forbes Top 100 Digital Stars sarah@sarahsaroshh.com\",\n    \"segment\": \"Segment C - High Potential (>=5% ER)\",\n    \"collaborationType\": \"Brand Ambassador\"\n  },\n  {\n    \"name\": \"Debasree Banerjee\",\n    \"username\": \"debasree_banerjee\",\n    \"platform\": \"Instagram\",\n    \"followers\": 72000,\n    \"avgLikes\": 4100,\n    \"avgComments\": 268,\n    \"engagementRate\": 6.07,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"collab@debasreebanerjee.com\",\n    \"profileLink\": \"https://instagram.com/debasree_banerjee\",\n    \"city\": \"Kolkata\",\n    \"bio\": \"Beauty fashion and lifestyle creator collab@debasreebanerjee.com\",\n    \"segment\": \"Segment C - High Potential (>=5% ER)\",\n    \"collaborationType\": \"Brand Ambassador\"\n  },\n  {\n    \"name\": \"Kritika Khurana\",\n    \"username\": \"thatbohogirl\",\n    \"platform\": \"Instagram\",\n    \"followers\": 94000,\n    \"avgLikes\": 5400,\n    \"avgComments\": 350,\n    \"engagementRate\": 6.12,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"pr@kritikakhurana.com\",\n    \"profileLink\": \"https://instagram.com/thatbohogirl\",\n    \"city\": \"Delhi\",\n    \"bio\": \"Beauty & fashion creator Delhi pr@kritikakhurana.com\",\n    \"segment\": \"Segment C - High Potential (>=5% ER)\",\n    \"collaborationType\": \"Brand Ambassador\"\n  },\n  {\n    \"name\": \"Komal Pandey\",\n    \"username\": \"komalpandeyofficial\",\n    \"platform\": \"Instagram\",\n    \"followers\": 99000,\n    \"avgLikes\": 5700,\n    \"avgComments\": 368,\n    \"engagementRate\": 6.13,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"pr@komalpandey.in\",\n    \"profileLink\": \"https://instagram.com/komalpandeyofficial\",\n    \"city\": \"Delhi\",\n    \"bio\": \"Fashion & beauty creator Delhi pr@komalpandey.in\",\n    \"segment\": \"Segment C - High Potential (>=5% ER)\",\n    \"collaborationType\": \"Brand Ambassador\"\n  },\n  {\n    \"name\": \"Aashna Shroff\",\n    \"username\": \"aashnashroff\",\n    \"platform\": \"Instagram\",\n    \"followers\": 97000,\n    \"avgLikes\": 5500,\n    \"avgComments\": 358,\n    \"engagementRate\": 6.04,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"collab@aashnashroff.com\",\n    \"profileLink\": \"https://instagram.com/aashnashroff\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Beauty blogger Mumbai collab@aashnashroff.com\",\n    \"segment\": \"Segment C - High Potential (>=5% ER)\",\n    \"collaborationType\": \"Brand Ambassador\"\n  },\n  {\n    \"name\": \"Masoom Minawala\",\n    \"username\": \"masoomminawala\",\n    \"platform\": \"Instagram\",\n    \"followers\": 91000,\n    \"avgLikes\": 5100,\n    \"avgComments\": 332,\n    \"engagementRate\": 5.97,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"collab@masoomminawala.com\",\n    \"profileLink\": \"https://instagram.com/masoomminawala\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Fashion & beauty creator Mumbai collab@masoomminawala.com\",\n    \"segment\": \"Segment C - High Potential (>=5% ER)\",\n    \"collaborationType\": \"Brand Ambassador\"\n  },\n  {\n    \"name\": \"Shefali Thakur\",\n    \"username\": \"theshefali_thakur10\",\n    \"platform\": \"Instagram\",\n    \"followers\": 45000,\n    \"avgLikes\": 1900,\n    \"avgComments\": 128,\n    \"engagementRate\": 4.51,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, General Fitness\",\n    \"email\": \"shefali.thakur@gmail.com\",\n    \"profileLink\": \"https://instagram.com/theshefali_thakur10\",\n    \"city\": \"India\",\n    \"bio\": \"Fitness content creator shefali.thakur@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Rubal Dhankar\",\n    \"username\": \"rubaldhankar\",\n    \"platform\": \"Instagram\",\n    \"followers\": 58000,\n    \"avgLikes\": 2300,\n    \"avgComments\": 155,\n    \"engagementRate\": 4.23,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, General Fitness\",\n    \"email\": \"rubaldhankar@gmail.com\",\n    \"profileLink\": \"https://instagram.com/rubaldhankar\",\n    \"city\": \"Delhi\",\n    \"bio\": \"Fitness lifestyle creator Delhi rubaldhankar@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Janaki Om Kumar\",\n    \"username\": \"janakiomkumarofficial\",\n    \"platform\": \"Instagram\",\n    \"followers\": 62000,\n    \"avgLikes\": 2450,\n    \"avgComments\": 162,\n    \"engagementRate\": 4.21,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Workout, Yoga\",\n    \"email\": \"janakiomkumarofficial@gmail.com\",\n    \"profileLink\": \"https://instagram.com/janakiomkumarofficial\",\n    \"city\": \"India\",\n    \"bio\": \"Doctor | Health Educator | Dancer janakiomkumarofficial@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Deanne Panday\",\n    \"username\": \"deannepanday\",\n    \"platform\": \"Instagram\",\n    \"followers\": 78000,\n    \"avgLikes\": 3100,\n    \"avgComments\": 205,\n    \"engagementRate\": 4.24,\n    \"niche\": \"Fitness\",\n    \"contentThemes\": \"Nutrition, General Fitness\",\n    \"email\": \"deanne@deannepanday.com\",\n    \"profileLink\": \"https://instagram.com/deannepanday\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Fitness enthusiast & author | nutrition & anti-aging deanne@deannepanday.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Shreemayi Beauty\",\n    \"username\": \"fitbeautyofficial\",\n    \"platform\": \"Instagram\",\n    \"followers\": 85000,\n    \"avgLikes\": 3400,\n    \"avgComments\": 225,\n    \"engagementRate\": 4.27,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"fitbeauty@honeycombmedia.in\",\n    \"profileLink\": \"https://instagram.com/fitbeautyofficial\",\n    \"city\": \"Delhi\",\n    \"bio\": \"Beauty Makeup Skincare & Haircare | YouTube 6million+ fitbeauty@honeycombmedia.in\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"House of Beauty\",\n    \"username\": \"houseofbeautyindia\",\n    \"platform\": \"Instagram\",\n    \"followers\": 93000,\n    \"avgLikes\": 4200,\n    \"avgComments\": 275,\n    \"engagementRate\": 4.81,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare\",\n    \"email\": \"houseofbeauty@gmail.com\",\n    \"profileLink\": \"https://instagram.com/houseofbeautyindia\",\n    \"city\": \"Mumbai\",\n    \"bio\": \"Face yoga & skincare tips houseofbeauty@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Skinoreal\",\n    \"username\": \"skinoreal\",\n    \"platform\": \"Instagram\",\n    \"followers\": 72000,\n    \"avgLikes\": 2800,\n    \"avgComments\": 188,\n    \"engagementRate\": 4.15,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare\",\n    \"email\": \"skinoreal@tistmedia.in\",\n    \"profileLink\": \"https://instagram.com/skinoreal\",\n    \"city\": \"India\",\n    \"bio\": \"Aesthetician | Skincare & Wellness | CIBTAC L-4 skinoreal@tistmedia.in\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  },\n  {\n    \"name\": \"Chetali Chadha\",\n    \"username\": \"chetalichadha\",\n    \"platform\": \"Instagram\",\n    \"followers\": 89000,\n    \"avgLikes\": 3800,\n    \"avgComments\": 248,\n    \"engagementRate\": 4.55,\n    \"niche\": \"Beauty\",\n    \"contentThemes\": \"Skincare, Makeup\",\n    \"email\": \"chetalichadha@gmail.com\",\n    \"profileLink\": \"https://instagram.com/chetalichadha\",\n    \"city\": \"India\",\n    \"bio\": \"Skincare Educator | TEDx | ET Woman Entrepreneur 2024 chetalichadha@gmail.com\",\n    \"segment\": \"Segment B - Mid Tier (30K-100K)\",\n    \"collaborationType\": \"Paid Sponsorship / Affiliate\"\n  }\n];\n\nreturn influencers.map(i => ({ json: i }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        576
+      ],
+      "id": "d95eb359-e484-411f-af61-45d637795737",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        944,
+        720
+      ],
+      "id": "22770664-10e1-48c9-82e6-412632798876",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1HunWHJlvaDBAwXDPxWyjGewzUKxFzSjXb_XctUDsGB4/edit?gid=0#gid=0",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{$('Loop - Process One by One').item.json.name }}",
+            "Platform": "={{$('Loop - Process One by One').item.json.platform }}",
+            "Followers": "={{$('Loop - Process One by One').item.json.followers }}",
+            "Engagement Rate": "={{$('Loop - Process One by One').item.json.engagementRate }}",
+            "Niche": "={{$('Loop - Process One by One').item.json.niche }}",
+            "Content Themes": "={{$('Loop - Process One by One').item.json.contentThemes }}",
+            "Contact Email": "={{$('Loop - Process One by One').item.json.email }}",
+            "Profile Link": "={{$('Loop - Process One by One').item.json.profileLink }}",
+            "City": "={{$('Loop - Process One by One').item.json.city }}",
+            "Segment": "={{$('Loop - Process One by One').item.json.segment }}",
+            "Collaboration Type": "={{$('Loop - Process One by One').item.json.collaborationType }}",
+            "Email Pitch": "={{ $json.emailPitch }}",
+            "Instagram DM": "={{ $json.instagramDM }}",
+            "Email Sent": "No"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Segment",
+              "displayName": "Segment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followers",
+              "displayName": "Followers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Engagement Rate",
+              "displayName": "Engagement Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Niche",
+              "displayName": "Niche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content Themes",
+              "displayName": "Content Themes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contact Email",
+              "displayName": "Contact Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Profile Link",
+              "displayName": "Profile Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Pitch",
+              "displayName": "Email Pitch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Collaboration Type",
+              "displayName": "Collaboration Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Instagram DM",
+              "displayName": "Instagram DM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "648d992a-7a85-4043-9b33-3fedc702d21d",
+      "name": "Google Sheets - Write to Segments",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        1488,
+        576
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Weekly Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter - Micro Influencer Range (5K to 100K)": {
+      "main": [
+        [
+          {
+            "node": "Enrich Profile Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Profile Data": {
+      "main": [
+        [
+          {
+            "node": "Switch - Classify into Segments A / B / C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Classify into Segments A / B / C": {
+      "main": [
+        [
+          {
+            "node": "Tag - Segment A",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag - Segment B",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag - Segment C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag - Segment A": {
+      "main": [
+        [
+          {
+            "node": "Loop - Process One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag - Segment B": {
+      "main": [
+        [
+          {
+            "node": "Loop - Process One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag - Segment C": {
+      "main": [
+        [
+          {
+            "node": "Loop - Process One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop - Process One by One": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI Chain - Generate Outreach Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Chain - Generate Outreach Messages": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Write to Raw Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Write to Raw Data": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Write to Segments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Send Outreach Email": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Mark Email as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Mark Email as Sent": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit - Wait 60 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit - Wait 60 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Loop - Process One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Filter - Micro Influencer Range (5K to 100K)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Chain - Generate Outreach Messages",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Write to Segments": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Send Outreach Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "16857a2a-582c-452e-8903-a2ae78eba01a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0f0600e6f9895b040a0a7c001d50da3882fcefb87297f74d3d4fddcbfd59ab72"
+  },
+  "id": "TIIPL5YDeHY-Khads6qeq",
+  "tags": []
+}

@@ -1,0 +1,1400 @@
+{
+  "name": "Micro-Influencer Outreach Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "19e66209-c5bf-4b84-a172-dee88a4d016a",
+      "name": "Weekly Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -4688,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/apify~instagram-hashtag-scraper/runs?token=YOUR_APIFY_TOKEN",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"hashtags\": [\"indianbeautyblogger\", \"beautybloggerindia\", \"indianmakeup\", \"desibeauty\", \"indianskincare\", \"beautytipsindia\", \"makeupindia\", \"yogaindia\", \"desifit\", \"mumbaiworkout\"],\n  \"resultsLimit\": 200\n}",
+        "options": {}
+      },
+      "id": "f9209f5d-bb01-485a-921f-000893e61337",
+      "name": "Apify - Start Scraper Run",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -4464,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "id": "e7d05c5a-3b5b-4fc3-bb44-8956446b6925",
+      "name": "Wait for Scraper to Finish",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -4240,
+        3968
+      ],
+      "webhookId": "a6bce263-d9a6-4b33-97ee-0dcae13259a2"
+    },
+    {
+      "parameters": {
+        "url": "https://api.apify.com/v2/acts/apify~instagram-hashtag-scraper/runs/last/dataset/items?token=YOUR_APIFY_TOKEN",
+        "options": {}
+      },
+      "id": "57e098b5-1c82-49fd-84f8-97a9f550ccd9",
+      "name": "Apify - Fetch Scraped Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -4016,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "2480b4a2-fb5f-4f2a-b2ff-f0c068d81845",
+              "leftValue": "={{ Number($json.followers) }}",
+              "rightValue": 5000,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "cc89377f-b650-4bf6-8daa-e73c0f5ce88f",
+              "leftValue": "={{ Number($json.followers) }}",
+              "rightValue": 10000000,
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b3a12106-6896-478b-9505-b8ba13141776",
+      "name": "Filter - Micro Influencer Range (5K to 100K)",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        -2912,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $input.item.json;\n\nconst followers = Number(item.followersCount || item.followers || 0);\nconst username = item.username || item.userName || '';\nconst posts = item.latestPosts || item.posts || [];\n\nconst avgLikes = posts.length > 0 ? posts.reduce((s, p) => s + (p.likesCount || p.likes || 0), 0) / posts.length : 0;\nconst avgComments = posts.length > 0 ? posts.reduce((s, p) => s + (p.commentsCount || p.comments || 0), 0) / posts.length : 0;\nconst engagementRate = followers > 0 ? parseFloat(((avgLikes + avgComments) / followers * 100).toFixed(2)) : 0;\n\nconst bio = item.biography || item.bio || '';\nconst emailMatch = bio.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);\nconst email = emailMatch ? emailMatch[0] : '';\n\nconst cities = ['Mumbai', 'Delhi', 'Bangalore', 'Bengaluru', 'Chennai', 'Hyderabad', 'Pune', 'Kolkata', 'Ahmedabad', 'Jaipur', 'Surat', 'Lucknow', 'Chandigarh', 'Indore'];\nconst city = cities.find(c => bio.toLowerCase().includes(c.toLowerCase())) || 'India';\n\nconst themes = [];\nif (bio.toLowerCase().includes('yoga')) themes.push('Yoga');\nif (bio.toLowerCase().includes('nutrition') || bio.toLowerCase().includes('diet')) themes.push('Nutrition');\nif (bio.toLowerCase().includes('workout') || bio.toLowerCase().includes('gym')) themes.push('Workout');\nif (bio.toLowerCase().includes('mental') || bio.toLowerCase().includes('mindfulness')) themes.push('Mental Wellness');\nif (bio.toLowerCase().includes('weight')) themes.push('Weight Management');\nif (bio.toLowerCase().includes('running') || bio.toLowerCase().includes('marathon')) themes.push('Running');\nif (themes.length === 0) themes.push('General Fitness');\n\nreturn {\n  name: item.fullName || item.full_name || username,\n  username: username,\n  platform: 'Instagram',\n  followers: followers,\n  avgLikes: Math.round(avgLikes),\n  avgComments: Math.round(avgComments),\n  engagementRate: engagementRate,\n  niche: 'Fitness',\n  contentThemes: themes.join(', '),\n  email: email,\n  profileLink: 'https://instagram.com/' + username,\n  city: city,\n  bio: bio\n};"
+      },
+      "id": "d9e9c402-b9ef-4db3-ae21-c1966b15de4f",
+      "name": "Enrich Profile Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2688,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "seg-a-followers",
+                    "leftValue": "={{ $json.followers }}",
+                    "rightValue": 30000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Segment A"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "seg-b-min",
+                    "leftValue": "={{ $json.followers }}",
+                    "rightValue": 30000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gt"
+                    }
+                  },
+                  {
+                    "id": "seg-b-max",
+                    "leftValue": "={{ $json.followers }}",
+                    "rightValue": 100000,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Segment B"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "seg-c-fallback",
+                    "leftValue": "={{ $json.followers }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "gte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Segment C"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "4fe35303-d044-463b-b3a3-1bed6c6fe6dc",
+      "name": "Switch - Classify into Segments A / B / C",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -2464,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "segment",
+              "value": "Segment A - Nano (<=30K, >=4% ER)",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "collaborationType",
+              "value": "Barter / UGC Creation",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "11d1b232-941a-481b-a086-3b21bccf0c3b",
+      "name": "Tag - Segment A",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        -2224,
+        3760
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "segment",
+              "value": "Segment B - Mid Tier (30K-100K, >=2% ER)",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "collaborationType",
+              "value": "Paid Sponsorship / Affiliate",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b9a6716e-29bf-4265-9d3a-ab8f2843c36f",
+      "name": "Tag - Segment B",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        -2224,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ccb140f6-53a8-4533-9315-b33bdeacc2ce",
+              "name": "segment",
+              "value": "Segment C - High Potential (>=5% ER)",
+              "type": "string"
+            },
+            {
+              "id": "9307ed4a-6ce8-4e89-acfa-5af0e5af2209",
+              "name": "collaborationType",
+              "value": "Brand Ambassador",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "151c07e4-4684-4a74-8a2b-062a68ee1543",
+      "name": "Tag - Segment C",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        -2224,
+        4192
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "8ea4126f-1cdb-4e81-b477-15e9f7976892",
+      "name": "Merge - Combine All Segments",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -2032,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 4,
+        "options": {}
+      },
+      "id": "60dbf355-71d5-483a-807b-8aa16e1cc6f8",
+      "name": "Loop - Process One by One",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1776,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "59f971a5-14e3-409d-b207-eb63dd3d2d1d",
+      "name": "Gemini 1.5 Flash",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        4144
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an influencer marketing outreach specialist working for an Indian wellness brand.\n\nInfluencer Details:\n- Name: {{ $json.name }}\n- Platform: {{ $json.platform }}\n- Followers: {{ $json.followers }}\n- Engagement Rate: {{ $json.engagementRate }}%\n- Niche: {{ $json.niche }}\n- Content Themes: {{ $json.contentThemes }}\n- City: {{ $json.city }}\n- Segment: {{ $json.segment }}\n- Collaboration Type: {{ $json.collaborationType }}\n- Bio: {{ $json.bio }}\n\nGenerate two outreach messages. Return ONLY a raw JSON object, no markdown:\n\n{\n  \"emailPitch\": \"60-90 words. Professional tone. Reference their niche, themes and engagement. Mention the collaboration type.\",\n  \"instagramDM\": \"15-30 words. Casual and direct. Reference their content.\"\n}"
+      },
+      "id": "65bb08cc-4e32-4222-a672-4df5a9d18193",
+      "name": "AI Chain - Generate Outreach Messages",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        -1520,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $input.item.json;\nconst response = item.text || item.response || item.output || '';\nlet parsed;\ntry {\n  const clean = response.replace(/```json|```/g, '').trim();\n  parsed = JSON.parse(clean);\n} catch(e) {\n  parsed = { emailPitch: 'Generation failed. Retry.', instagramDM: 'Generation failed. Retry.' };\n}\nreturn {\n  ...item,\n  emailPitch: parsed.emailPitch || '',\n  instagramDM: parsed.instagramDM || ''\n};"
+      },
+      "id": "ff2f4664-a5ef-4e63-a44c-a70aaf0eaa3b",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1248,
+        3872
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZGBnmdYgRmL_FidkAV0DWIqdWeWkLyDXav8eyLin2HQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Platform": "={{ $('Loop - Process One by One').item.json.platform }}",
+            "Followers": "={{ $('Loop - Process One by One').item.json.followers }}",
+            "Engagement Rate": "={{ $('Loop - Process One by One').item.json.engagementRate }}",
+            "Niche": "={{ $('Loop - Process One by One').item.json.niche }}",
+            "Content Themes": "={{ $('Loop - Process One by One').item.json.contentThemes }}",
+            "Contact Email": "={{ $('Loop - Process One by One').item.json.email }}",
+            "Profile Link": "={{ $('Loop - Process One by One').item.json.profileLink }}",
+            "City": "={{ $('Loop - Process One by One').item.json.platform }}",
+            "Segment": "={{ $('Loop - Process One by One').item.json.segment }}",
+            "Email Pitch": "={{ $json.emailPitch }}",
+            "Instagram DM": "={{ $json.instagramDM }}",
+            "Email Sent": "No",
+            "Name": "={{ $('Loop - Process One by One').item.json.name }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followers",
+              "displayName": "Followers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Engagement Rate",
+              "displayName": "Engagement Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Niche",
+              "displayName": "Niche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content Themes",
+              "displayName": "Content Themes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contact Email",
+              "displayName": "Contact Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Profile Link",
+              "displayName": "Profile Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Segment",
+              "displayName": "Segment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Pitch",
+              "displayName": "Email Pitch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Instagram DM",
+              "displayName": "Instagram DM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "be9231c4-1455-4df2-a321-b2c101f6790c",
+      "name": "Google Sheets - Write to Raw Data",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -1104,
+        3968
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "nitroxassualt@gmail.com\n",
+        "subject": "Collaboration Opportunity - [Your Brand Name]",
+        "emailType": "text",
+        "message": "=={{ $json.emailPitch || 'Hello, we would love to collaborate with you!' }}",
+        "options": {
+          "senderName": "Your Brand Name"
+        }
+      },
+      "id": "b67c8d10-419f-45b4-938d-182398cf67a3",
+      "name": "Gmail - Send Outreach Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -672,
+        3856
+      ],
+      "webhookId": "e6d112c1-75a2-4048-b956-5fe8ebaaddeb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZGBnmdYgRmL_FidkAV0DWIqdWeWkLyDXav8eyLin2HQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Profile Link": "={{ $('Loop - Process One by One').item.json.profileLink }}",
+            "Email Sent": "Yes"
+          },
+          "matchingColumns": [
+            "Profile Link"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followers",
+              "displayName": "Followers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Engagement Rate",
+              "displayName": "Engagement Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Niche",
+              "displayName": "Niche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content Themes",
+              "displayName": "Content Themes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contact Email",
+              "displayName": "Contact Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Profile Link",
+              "displayName": "Profile Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Segment",
+              "displayName": "Segment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Pitch",
+              "displayName": "Email Pitch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Instagram DM",
+              "displayName": "Instagram DM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f186dbe7-bdf8-4953-8bcd-463850622f4b",
+      "name": "Google Sheets - Mark Email as Sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -464,
+        3856
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "id": "ee548ebb-e6a9-4717-bde4-2d5f8d68ca87",
+      "name": "Rate Limit - Wait 60 Seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -672,
+        4096
+      ],
+      "webhookId": "eb6710bd-612c-4163-a8c8-6ce67314b9f7"
+    },
+    {
+      "parameters": {
+        "content": "STEP 1 \u2014 TRIGGER\n\nRuns automatically every Monday at 9:00 AM via cron schedule. No manual action needed. Initiates the full pipeline.",
+        "height": 140,
+        "color": 7
+      },
+      "id": "b4edd6ad-2fca-4a54-bf32-c6d521bbcdbd",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -4736,
+        3776
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 2 \u2014 DISCOVERY\n\nApify Instagram Hashtag Scraper is triggered via HTTP POST. Hashtags: #fitnessindia #indianfitness #fitnessmotivation.\n\nA 45-second wait allows the scraper to complete. Results are then fetched via HTTP GET.\n\nOutput: Raw profile JSON data.",
+        "height": 200,
+        "width": 420,
+        "color": 3
+      },
+      "id": "fc347cde-d006-42e4-9aa9-d8bf18279af6",
+      "name": "Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -4416,
+        3648
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 3 \u2014 FILTERING\n\nOnly profiles with 5,000 to 100,000 followers pass through. Profiles outside this range are dropped automatically.",
+        "height": 140,
+        "width": 260,
+        "color": 5
+      },
+      "id": "cbc7b753-c3f1-4c62-bfde-98058c154f48",
+      "name": "Note 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2992,
+        3776
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 4 \u2014 ENRICHMENT\n\nFor each profile:\n- Engagement Rate calculated from avg likes and comments\n- Email extracted from bio via regex\n- City detected from bio text\n- Content themes classified from bio keywords\n\nAll 13 sheet columns are populated here.",
+        "height": 200,
+        "width": 300,
+        "color": 4
+      },
+      "id": "f3e83278-ac15-46be-9ef8-5095fa7a8fa8",
+      "name": "Note 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2688,
+        3728
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 5 \u2014 SEGMENTATION\n\nSegment A \u2014 Nano Creators\n<=30K followers and >=4% engagement\nCollab type: Barter / UGC\n\nSegment B \u2014 Mid Tier Micro\n30K-100K followers and >=2% engagement\nCollab type: Paid Sponsorship / Affiliate\n\nSegment C \u2014 High Potential\n>=5% engagement regardless of follower count\nCollab type: Brand Ambassador\n\nAll three are merged and the segment label is stored in the Segment column of the sheet. Use filter view in Google Sheets to view each segment separately.",
+        "height": 300,
+        "width": 360,
+        "color": 6
+      },
+      "id": "4f61b95f-94f6-42d7-ac7a-1f1b9a78898b",
+      "name": "Note 5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2384,
+        3408
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 6 \u2014 AI MESSAGE GENERATION\n\nEach influencer is processed one at a time via a loop.\n\nGemini 1.5 Flash generates:\n1. Email Pitch (60-90 words) \u2014 professional, references niche, themes, collaboration type\n2. Instagram DM (15-30 words) \u2014 casual and direct\n\nA 60-second wait between iterations prevents Gemini API rate limit errors.\n\nResponse is parsed from JSON and attached to the record.",
+        "height": 260,
+        "width": 360,
+        "color": 2
+      },
+      "id": "b473bf8b-df67-4ecb-9c00-0088c9a79ded",
+      "name": "Note 6",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1856,
+        3680
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 7 \u2014 DATA STORAGE\n\nAll 13 fields written to the Raw Data tab in Google Sheets.\n\nTo view by segment, use the filter view on the Segment column. No separate tabs needed \u2014 everything is in one clean sheet.",
+        "height": 180,
+        "width": 300
+      },
+      "id": "c5669410-6e4b-4eca-8e6c-850eb2ace6ec",
+      "name": "Note 7",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        3696
+      ]
+    },
+    {
+      "parameters": {
+        "content": "STEP 8 \u2014 OUTREACH\n\nIf email found in bio: Gmail node sends outreach automatically. Sheet is updated to Sent.\n\nIf no email found: Row is saved in sheet. DM message is ready for manual sending via Instagram or tools like ManyChat.\n\nNote: Meta Graph API requires business approval for automated DM sending.",
+        "height": 220,
+        "width": 340,
+        "color": 3
+      },
+      "id": "e1764721-9ac6-42a3-bec1-d37b2e420fb2",
+      "name": "Note 8",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        3584
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1HunWHJlvaDBAwXDPxWyjGewzUKxFzSjXb_XctUDsGB4/edit?gid=0#gid=0",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Segment": "={{ $('Loop - Process One by One').item.json.segment }}",
+            "Name": "={{ $('Loop - Process One by One').item.json.name }}",
+            "Platform": "={{ $('Loop - Process One by One').item.json.platform }}",
+            "Followers": "={{ $('Loop - Process One by One').item.json.followers }}",
+            "Engagement Rate": "={{ $('Loop - Process One by One').item.json.engagementRate }}",
+            "Niche": "={{ $('Loop - Process One by One').item.json.niche }}",
+            "Content Themes": "={{ $('Loop - Process One by One').item.json.contentThemes }}",
+            "Contact Email": "={{ $('Loop - Process One by One').item.json.email }}",
+            "Profile Link": "={{ $json.profileLink }}",
+            "City": "={{ $json.city }}",
+            "Email Pitch": "={{ $json.emailPitch }}",
+            "Instagram DM": "={{ $json.instagramDM }}",
+            "Email Sent": "No"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Segment",
+              "displayName": "Segment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followers",
+              "displayName": "Followers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Engagement Rate",
+              "displayName": "Engagement Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Niche",
+              "displayName": "Niche",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Content Themes",
+              "displayName": "Content Themes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contact Email",
+              "displayName": "Contact Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Profile Link",
+              "displayName": "Profile Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Pitch",
+              "displayName": "Email Pitch",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Instagram DM",
+              "displayName": "Instagram DM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f751a31a-010d-4d9e-a117-876c593f6c8e",
+      "name": "Google Sheets - Write to Segments",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [
+        -896,
+        4096
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const blocklist = ['dogsofinstagram','greatpetcare','dogs','pets','catsofinstagram','cat','dog','animal','rescue','petcare'];\nconst seen = new Set();\nconst unique = [];\nfor (const item of $input.all()) {\n  const username = item.json.ownerUsername || item.json.username || item.json.owner?.username;\n  \n  if (!username || username.trim() === '') continue;\n  \n  if (!seen.has(username) && !blocklist.some(b => username.toLowerCase().includes(b))) {\n    seen.add(username);\n    unique.push({ json: { username } });\n  }\n  if (unique.length >= 20) break;\n}\nif (unique.length === 0) {\n  throw new Error('No valid influencer usernames found - all profiles were filtered out');\n}\nreturn unique;"
+      },
+      "id": "20eafe3d-7e00-4708-a78f-496f38e014c1",
+      "name": "Deduplicate Usernames",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3808,
+        3968
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/actor-tasks/dazzling_eruption~instagram-profile-scraper-task-1/run-sync-get-dataset-items?token=YOUR_APIFY_TOKEN",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ usernames: $input.all().map(i => i.json.username) }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "761fc1e3-3052-448e-a449-b71ce0c7ceb6",
+      "name": "Apify - Profile Scraper Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3584,
+        3968
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Weekly Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Apify - Start Scraper Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify - Start Scraper Run": {
+      "main": [
+        [
+          {
+            "node": "Wait for Scraper to Finish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Scraper to Finish": {
+      "main": [
+        [
+          {
+            "node": "Apify - Fetch Scraped Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify - Fetch Scraped Results": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate Usernames",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter - Micro Influencer Range (5K to 100K)": {
+      "main": [
+        [
+          {
+            "node": "Enrich Profile Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich Profile Data": {
+      "main": [
+        [
+          {
+            "node": "Switch - Classify into Segments A / B / C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Classify into Segments A / B / C": {
+      "main": [
+        [
+          {
+            "node": "Tag - Segment A",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag - Segment B",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag - Segment C",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag - Segment A": {
+      "main": [
+        [
+          {
+            "node": "Loop - Process One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag - Segment B": {
+      "main": [
+        [
+          {
+            "node": "Loop - Process One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop - Process One by One": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI Chain - Generate Outreach Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini 1.5 Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Chain - Generate Outreach Messages",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Chain - Generate Outreach Messages": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Write to Raw Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Write to Raw Data": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Write to Segments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Send Outreach Email": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Mark Email as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Mark Email as Sent": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit - Wait 60 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit - Wait 60 Seconds": {
+      "main": [
+        [
+          {
+            "node": "Loop - Process One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Write to Segments": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Send Outreach Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate Usernames": {
+      "main": [
+        [
+          {
+            "node": "Apify - Profile Scraper Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify - Profile Scraper Sync": {
+      "main": [
+        [
+          {
+            "node": "Filter - Micro Influencer Range (5K to 100K)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag - Segment C": {
+      "main": [
+        [
+          {
+            "node": "Loop - Process One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "546b3624-09e0-46ba-8710-ad432d1ed14d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0f0600e6f9895b040a0a7c001d50da3882fcefb87297f74d3d4fddcbfd59ab72"
+  },
+  "id": "7PYeON5QbpS7qflDsrRTz",
+  "tags": []
+}
